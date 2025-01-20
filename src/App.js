@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const tempMovieData = [
   {
@@ -47,12 +47,17 @@ const tempWatchedData = [
   },
 ];
 
+const key = "f84fc31d"
+
 const average = (arr) =>
   arr.reduce((acc, cur, i, arr) => acc + cur / arr.length, 0);
 
 export default function App() {
   const [query, setQuery] = useState("");
-  const [movies, setMovies] = useState(tempMovieData);
+  const [movies, setMovies] = useState([]);
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
   const [watched, setWatched] = useState(tempWatchedData);
   const [isOpen1, setIsOpen1] = useState(true);
   const [isOpen2, setIsOpen2] = useState(true);
@@ -60,6 +65,33 @@ export default function App() {
   const avgImdbRating = average(watched.map((movie) => movie.imdbRating));
   const avgUserRating = average(watched.map((movie) => movie.userRating));
   const avgRuntime = average(watched.map((movie) => movie.runtime));
+
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      setError("")
+
+      const res = await fetch(`http://www.omdbapi.com/?apikey=${key}&s=${query}`);
+      if(!res.ok) throw Error("Something went wrong with fetching movies")
+
+      const data = await res.json();
+      if(data.Response === "False") throw Error("Movie not found")
+
+      setMovies(data.Search);
+      setError("")
+    } catch (err) {
+      if (err.name !== "AbortError"){
+        setError(err.message)
+      }
+    } finally {
+      setIsLoading(false)
+    }
+
+  }
+
+  useEffect(() => {
+    fetchData()
+  },[query])
 
   return (
     <>
@@ -102,10 +134,10 @@ export default function App() {
                   </div>
                 </li>
               ))}
+              {isLoading && <p className="loader">Loading...</p>}
             </ul>
           )}
         </div>
-
         <div className="box">
           <button
             className="btn-toggle"
